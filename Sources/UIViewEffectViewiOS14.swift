@@ -7,8 +7,25 @@
 
 import UIKit
 
+
+protocol PropertyStoring {
+    associatedtype T
+    func getAssociatedObject(_ key: UnsafeRawPointer!, defaultValue: T) -> T
+}
+extension PropertyStoring {
+    func getAssociatedObject(_ key: UnsafeRawPointer!, defaultValue: T) -> T {
+        guard let value = objc_getAssociatedObject(self, key) as? T else {
+            return defaultValue
+        }
+        return value
+    }
+}
+
+
 @available(iOS 14, *)
-extension UIVisualEffectView {
+extension UIVisualEffectView: PropertyStoring {
+    typealias T = UIBlurEffect.Style
+    
     var ios14_blurRadius: CGFloat {
         get {
             return gaussianBlur?.requestedValues?["inputRadius"] as? CGFloat ?? 0
@@ -30,6 +47,23 @@ extension UIVisualEffectView {
             applyChanges()
         }
     }
+    
+    private struct CustomProperties {
+        static var blurEffectStyle = UIBlurEffect.Style.dark
+    }
+    
+    var blurEffectStyle: UIBlurEffect.Style {
+        get {
+            return getAssociatedObject(&CustomProperties.blurEffectStyle, defaultValue: CustomProperties.blurEffectStyle)
+        }
+        set {
+            return objc_setAssociatedObject(self, &CustomProperties.blurEffectStyle, newValue, .OBJC_ASSOCIATION_RETAIN)
+        }
+    }
+    
+    open func setBlurEffectStyle(_ style: UIBlurEffect.Style) {
+        blurEffectStyle = style
+    }
 }
 
 private extension UIVisualEffectView {
@@ -46,7 +80,11 @@ private extension UIVisualEffectView {
         return overlayView?.value(forKey: "viewEffects", withFilterType: "sourceOver")
     }
     func prepareForChanges() {
-        self.effect = UIBlurEffect(style: .light)
+        if #available(iOS 14, *) {
+            self.effect = UIBlurEffect(style: blurEffectStyle)
+        } else {
+            // Fallback on earlier versions
+        }
         gaussianBlur?.setValue(1.0, forKeyPath: "requestedScaleHint")
     }
     func applyChanges() {
