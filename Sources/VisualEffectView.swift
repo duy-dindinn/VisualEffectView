@@ -12,7 +12,7 @@ import UIKit
 open class VisualEffectView: UIVisualEffectView {
     
     /// Returns the instance of UIBlurEffect.
-    private let blurEffect = (NSClassFromString("_UICustomBlurEffect") as! UIBlurEffect.Type).init()
+    private var blurEffect = (NSClassFromString("_UICustomBlurEffect") as! UIBlurEffect.Type).init()
     
     /**
      Tint color.
@@ -114,7 +114,10 @@ private extension VisualEffectView {
     /// Sets the value for the key on the blurEffect.
     func _setValue<T>(_ value: T, forKey key: Key) {
         blurEffect.setValue(value, forKeyPath: key.rawValue)
-        self.effect = blurEffect
+        if #available(iOS 14, *) {
+        } else {
+            self.effect = blurEffect
+        }
     }
     
     enum Key: String {
